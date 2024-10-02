@@ -152,6 +152,10 @@ contract Evote {
         return votings[votingId].candidates[index];
     }
 
+    function getCandidates(uint256 votingId) external view returns (string[] memory) {
+        return votings[votingId].candidates;
+    }
+
     function isRegisteredUser(address _userAddress) external view returns (bool) {
         return users[_userAddress].isRegistered;
     }
