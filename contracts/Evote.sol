@@ -20,17 +20,17 @@ contract Evote {
 
     struct Voting {
         string title;
-        string description;
         string[] candidates;
         mapping(string => uint256) votes;
-        bool votingStarted;
+        uint256 startTime;
+        uint256 endTime;
         bool votingEnded;
     }
 
     mapping(uint256 => Voting) public votings;
 
     event UserRegistered(address userAddress, string NIM, Role role);
-    event VotingCreated(uint256 votingId, string title);
+    event VotingCreated(uint256 votingId, string title, uint256 startTime, uint256 endTime);
     event VotingStarted(uint256 votingId);
     event VotingEnded(uint256 votingId);
     event Voted(address voterAddress, uint256 votingId, string candidate);
@@ -47,8 +47,10 @@ contract Evote {
     }
 
     modifier votingActive(uint256 votingId) {
-        require(votings[votingId].votingStarted, "Voting has not started yet");
-        require(!votings[votingId].votingEnded, "Voting has already ended");
+        Voting storage currentVoting = votings[votingId];
+        require(block.timestamp >= currentVoting.startTime, "Voting has not started yet");
+        require(block.timestamp <= currentVoting.endTime, "Voting has already ended");
+        require(!currentVoting.votingEnded, "Voting has been marked as ended by admin");
         _;
     }
 
@@ -81,27 +83,28 @@ contract Evote {
         emit UserRegistered(_userAddress, _NIM, _role);
     }
 
-    function createVoting(string memory _title, string memory _description, string[] memory _candidates) external onlyAdmin {
+    function createVoting(string memory _title, string[] memory _candidates, uint256 _startTime, uint256 _endTime) external onlyAdmin {
+        require(_startTime < _endTime, "Start time must be before end time");
+        require(_startTime > block.timestamp, "Start time must be in the future");
+
         Voting storage newVoting = votings[votingCount];
         newVoting.title = _title;
-        newVoting.description = _description;
         for (uint i = 0; i < _candidates.length; i++) {
             newVoting.candidates.push(_candidates[i]);
         }
+        newVoting.startTime = _startTime;
+        newVoting.endTime = _endTime;
         votingCount++;
-        emit VotingCreated(votingCount - 1, _title);
-    }
 
-    function startVoting(uint256 votingId) external onlyAdmin {
-        require(!votings[votingId].votingStarted, "Voting is already started");
-        votings[votingId].votingStarted = true;
-        emit VotingStarted(votingId);
+        emit VotingCreated(votingCount - 1, _title, _startTime, _endTime);
     }
 
     function endVoting(uint256 votingId) external onlyAdmin {
-        require(votings[votingId].votingStarted, "Voting has not started yet");
-        require(!votings[votingId].votingEnded, "Voting has already ended");
-        votings[votingId].votingEnded = true;
+        Voting storage currentVoting = votings[votingId];
+        require(block.timestamp > currentVoting.endTime, "Voting end time has not passed yet");
+        require(!currentVoting.votingEnded, "Voting has already ended");
+
+        currentVoting.votingEnded = true;
         emit VotingEnded(votingId);
     }
 
@@ -110,7 +113,6 @@ contract Evote {
         require(user.role == Role.Voter, "Only voters can vote");
         require(user.isRegistered, "You are not registered to vote");
         require(!user.hasVoted, "You have already voted");
-
 
         bool validCandidate = false;
         Voting storage currentVoting = votings[votingId];
@@ -122,17 +124,22 @@ contract Evote {
         }
         require(validCandidate, "Invalid candidate");
 
-
         currentVoting.votes[_candidate] += 1;
         user.hasVoted = true;
 
         emit Voted(msg.sender, votingId, _candidate);
     }
 
-    function getResults(uint256 votingId, string memory _candidate) external view returns (uint256) {
-        require(votings[votingId].votingEnded, "Voting has not ended yet");
-        return votings[votingId].votes[_candidate];
+    function isVotingActive(uint256 votingId) external view returns (bool) {
+        Voting storage currentVoting = votings[votingId];
+        return block.timestamp >= currentVoting.startTime && block.timestamp <= currentVoting.endTime && !currentVoting.votingEnded;
     }
+
+    function getResults(uint256 votingId, string memory _candidate) external view returns (int) {
+        require(votings[votingId].votingEnded || block.timestamp > votings[votingId].endTime, "Voting has not ended yet");
+        return int(votings[votingId].votes[_candidate]);
+    }
+
 
     function getCandidateCount(uint256 votingId) external view returns (uint256) {
         return votings[votingId].candidates.length;

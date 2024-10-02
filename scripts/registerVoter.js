@@ -2,7 +2,7 @@ const hre = require("hardhat");
 
 async function main() {
 	const evoteFactory = await hre.ethers.getContractFactory("Evote");
-	const ev = await evoteFactory.attach("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
+	const ev = await evoteFactory.attach("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0");
 
 	const userAddress = "0xlEaDbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 	const nim = "13519100";
