@@ -20,6 +20,7 @@ contract Evote {
 
     struct Voting {
         string title;
+        string description;
         string[] candidates;
         mapping(string => uint256) votes;
         bool votingStarted;
@@ -80,9 +81,10 @@ contract Evote {
         emit UserRegistered(_userAddress, _NIM, _role);
     }
 
-    function createVoting(string memory _title, string[] memory _candidates) external onlyAdmin {
+    function createVoting(string memory _title, string memory _description, string[] memory _candidates) external onlyAdmin {
         Voting storage newVoting = votings[votingCount];
         newVoting.title = _title;
+        newVoting.description = _description;
         for (uint i = 0; i < _candidates.length; i++) {
             newVoting.candidates.push(_candidates[i]);
         }
