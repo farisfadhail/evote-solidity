@@ -20,6 +20,7 @@ contract Evote {
 
     struct Voting {
         string title;
+        string description;
         string[] candidates;
         mapping(string => uint256) votes;
         uint256 startTime;
@@ -30,7 +31,7 @@ contract Evote {
     mapping(uint256 => Voting) public votings;
 
     event UserRegistered(address userAddress, string NIM, Role role);
-    event VotingCreated(uint256 votingId, string title, uint256 startTime, uint256 endTime);
+    event VotingCreated(uint256 votingId, string title, string description, uint256 startTime, uint256 endTime);
     event VotingStarted(uint256 votingId);
     event VotingEnded(uint256 votingId);
     event Voted(address voterAddress, uint256 votingId, string candidate);
@@ -83,12 +84,13 @@ contract Evote {
         emit UserRegistered(_userAddress, _NIM, _role);
     }
 
-    function createVoting(string memory _title, string[] memory _candidates, uint256 _startTime, uint256 _endTime) external onlyAdmin {
+    function createVoting(string memory _title, string memory _description, string[] memory _candidates, uint256 _startTime, uint256 _endTime) external onlyAdmin {
         require(_startTime < _endTime, "Start time must be before end time");
         require(_startTime > block.timestamp, "Start time must be in the future");
 
         Voting storage newVoting = votings[votingCount];
         newVoting.title = _title;
+        newVoting.description = _description;
         for (uint i = 0; i < _candidates.length; i++) {
             newVoting.candidates.push(_candidates[i]);
         }
@@ -96,7 +98,7 @@ contract Evote {
         newVoting.endTime = _endTime;
         votingCount++;
 
-        emit VotingCreated(votingCount - 1, _title, _startTime, _endTime);
+        emit VotingCreated(votingCount - 1, _title, _description, _startTime, _endTime);
     }
 
     function endVoting(uint256 votingId) external onlyAdmin {
