@@ -2,12 +2,12 @@ const hre = require("hardhat");
 
 async function main() {
 	const evoteFactory = await hre.ethers.getContractFactory("Evote");
-	const ev = await evoteFactory.attach("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9");
+	const ev = await evoteFactory.attach("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512");
 
-	const userAddress = "0xlEaDbeefdeadbeefdeadbeefdeadbeefdeadbeef";
-	const result = await ev.getUserRole(userAddress);
+	const nim = "13519100";
+	const result = await ev.getUserRole(nim);
 
-	console.log(`User ${userAddress} has role: ${result}`);
+	console.log(`User ${nim} has role: ${result}`);
 }
 
 main().catch((error) => {
