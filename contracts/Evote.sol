@@ -6,6 +6,7 @@ contract Evote {
 
     struct User {
         string NIM;
+        bytes32 passwordHash;
         Role role;
         bool hasVoted;
         bool isRegistered;
@@ -14,9 +15,10 @@ contract Evote {
     address public superAdmin;
     uint256 public votingCount;
 
-    mapping(address => User) public users;
+    mapping(string => User) public users;
+    mapping(address => User) public admins;
 
-    address[] public votersList;
+    string[] public votersList;
 
     struct Voting {
         string title;
@@ -30,15 +32,15 @@ contract Evote {
 
     mapping(uint256 => Voting) public votings;
 
-    event UserRegistered(address userAddress, string NIM, Role role);
+    event UserRegistered(string NIM, Role role);
     event VotingCreated(uint256 votingId, string title, string description, uint256 startTime, uint256 endTime);
     event VotingStarted(uint256 votingId);
     event VotingEnded(uint256 votingId);
-    event Voted(address voterAddress, uint256 votingId, string candidate);
-    event LoginSuccess(address userAddress, string NIM, Role role);
+    event Voted(string NIM, uint256 votingId, string candidate);
+    event LoginSuccess(string NIM, Role role);
 
     modifier onlyAdmin() {
-        require(users[msg.sender].role == Role.Admin, "Only admin can perform this action");
+        require(admins[msg.sender].role == Role.Admin, "Only admin can perform this action");
         _;
     }
 
@@ -57,20 +59,24 @@ contract Evote {
 
     constructor() {
         superAdmin = msg.sender;
-        users[msg.sender] = User({
+        admins[msg.sender] = User({
             NIM: "0000",
+            passwordHash: keccak256(abi.encodePacked("admin")),
             role: Role.Admin,
             hasVoted: false,
             isRegistered: true
         });
     }
 
-    function registerUser(address _userAddress, string memory _NIM, Role _role) external onlySuperAdmin {
-        require(!users[_userAddress].isRegistered, "User is already registered");
+    function registerUser(string memory _NIM, string memory _password, Role _role) external onlySuperAdmin {
+        require(!users[_NIM].isRegistered, "User is already registered");
         require(_role == Role.Admin || _role == Role.Voter, "Invalid role");
 
-        users[_userAddress] = User({
+        bytes32 passwordHash = keccak256(abi.encodePacked(_password));
+
+        users[_NIM] = User({
             NIM: _NIM,
+            passwordHash: passwordHash,
             role: _role,
             hasVoted: false,
             isRegistered: true
@@ -78,11 +84,34 @@ contract Evote {
 
 
         if (_role == Role.Voter) {
-            votersList.push(_userAddress);
+            votersList.push(_NIM);
         }
 
-        emit UserRegistered(_userAddress, _NIM, _role);
+        emit UserRegistered(_NIM, _role);
     }
+
+    function login(string memory _NIM, string memory _password) external returns (bool) {
+        User storage user = users[_NIM];
+        require(user.isRegistered, "User not registered");
+        require(keccak256(abi.encodePacked(user.NIM)) == keccak256(abi.encodePacked(_NIM)), "Invalid NIM");
+
+        bytes32 passwordHashInput = keccak256(abi.encodePacked(_password));
+
+        require(passwordHashInput == user.passwordHash, "Invalid credentials");
+
+        emit LoginSuccess(_NIM, user.role);
+        return true;
+    }
+
+    // function login(string memory _NIM) external returns (bool) {
+    //     User storage user = users[_NIM];
+    //     require(user.isRegistered, "User not registered");
+    //     require(keccak256(abi.encodePacked(user.NIM)) == keccak256(abi.encodePacked(_NIM)), "Invalid NIM");
+
+
+    //     emit LoginSuccess(user.NIM, user.role);
+    //     return true;
+    // }
 
     function createVoting(string memory _title, string memory _description, string[] memory _candidates, uint256 _startTime, uint256 _endTime) external onlyAdmin {
         require(_startTime < _endTime, "Start time must be before end time");
@@ -110,8 +139,8 @@ contract Evote {
         emit VotingEnded(votingId);
     }
 
-    function vote(uint256 votingId, string memory _candidate) external votingActive(votingId) {
-        User storage user = users[msg.sender];
+    function vote(string memory _NIM, uint256 votingId, string memory _candidate) external votingActive(votingId) {
+        User storage user = users[_NIM];
         require(user.role == Role.Voter, "Only voters can vote");
         require(user.isRegistered, "You are not registered to vote");
         require(!user.hasVoted, "You have already voted");
@@ -129,7 +158,7 @@ contract Evote {
         currentVoting.votes[_candidate] += 1;
         user.hasVoted = true;
 
-        emit Voted(msg.sender, votingId, _candidate);
+        emit Voted(_NIM, votingId, _candidate);
     }
 
     function isVotingActive(uint256 votingId) external view returns (bool) {
@@ -156,25 +185,15 @@ contract Evote {
         return votings[votingId].candidates;
     }
 
-    function isRegisteredUser(address _userAddress) external view returns (bool) {
-        return users[_userAddress].isRegistered;
+    function isRegisteredUser(string memory _NIM) external view returns (bool) {
+        return users[_NIM].isRegistered;
     }
 
-    function getUserRole(address _userAddress) external view returns (Role) {
-        return users[_userAddress].role;
+    function getUserRole(string memory _NIM) external view returns (Role) {
+        return users[_NIM].role;
     }
 
-    function getVoterAddresses() external view returns (address[] memory) {
+    function getVoterNIMS() external view returns (string[] memory) {
         return votersList;
-    }
-
-    function login(string memory _NIM) external returns (bool) {
-        User storage user = users[msg.sender];
-        require(user.isRegistered, "User not registered");
-        require(keccak256(abi.encodePacked(user.NIM)) == keccak256(abi.encodePacked(_NIM)), "Invalid NIM");
-
-
-        emit LoginSuccess(msg.sender, user.NIM, user.role);
-        return true;
     }
 }
