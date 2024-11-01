@@ -7,9 +7,10 @@ async function main() {
 	const title = "Pemilihan Ketua Umum HIMASIF";
 	const description = "Pemilihan Ketua Umum HIMASIF periode 2021/2022";
 	const candidates = ["Achmad", "Faris", "Fadhail"];
+	const imageHash = ["QmXf8a918qwe987", "QmXf8uhi2398kj", "QmXf8293nkje02jhu4"];
 	const start = Math.floor(Date.now() / 1000);
 	const end = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
-	await ev.createVoting(title, description, candidates, start, end);
+	await ev.createVoting(title, description, candidates, imageHash, start, end);
 
 	console.log(`Voting created with title ${title}`);
 }

@@ -24,6 +24,7 @@ contract Evote {
         string title;
         string description;
         string[] candidates;
+        string[] imageHash;
         mapping(string => uint256) votes;
         uint256 startTime;
         uint256 endTime;
@@ -113,15 +114,18 @@ contract Evote {
     //     return true;
     // }
 
-    function createVoting(string memory _title, string memory _description, string[] memory _candidates, uint256 _startTime, uint256 _endTime) external onlyAdmin {
+    function createVoting(string memory _title, string memory _description, string[] memory _candidates, string[] memory _imageHash, uint256 _startTime, uint256 _endTime) external onlyAdmin {
         require(_startTime < _endTime, "Start time must be before end time");
         require(_startTime > block.timestamp, "Start time must be in the future");
+        require(_candidates.length > 1, "At least 2 candidates required");
+        require(_candidates.length == _imageHash.length, "Number of candidates and image hashes must be equal");
 
         Voting storage newVoting = votings[votingCount];
         newVoting.title = _title;
         newVoting.description = _description;
         for (uint i = 0; i < _candidates.length; i++) {
             newVoting.candidates.push(_candidates[i]);
+            newVoting.imageHash.push(_imageHash[i]);
         }
         newVoting.startTime = _startTime;
         newVoting.endTime = _endTime;
@@ -171,18 +175,17 @@ contract Evote {
         return int(votings[votingId].votes[_candidate]);
     }
 
-
     function getCandidateCount(uint256 votingId) external view returns (uint256) {
         return votings[votingId].candidates.length;
     }
 
-    function getCandidate(uint256 votingId, uint256 index) external view returns (string memory) {
+    function getCandidate(uint256 votingId, uint256 index) external view returns (string memory, string memory) {
         require(index < votings[votingId].candidates.length, "Invalid index");
-        return votings[votingId].candidates[index];
+        return (votings[votingId].candidates[index], votings[votingId].imageHash[index]);
     }
 
-    function getCandidates(uint256 votingId) external view returns (string[] memory) {
-        return votings[votingId].candidates;
+    function getCandidates(uint256 votingId) external view returns (string[] memory, string[] memory) {
+        return (votings[votingId].candidates, votings[votingId].imageHash);
     }
 
     function isRegisteredUser(string memory _NIM) external view returns (bool) {
