@@ -1,8 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
 
-const { vars } = require("hardhat/config");
-
-const INFURA_API_KEY = vars.get(process.env.INFURA_API_KEY);
+const INFURA_API_KEY = process.env.INFURA_API_KEY;
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -14,6 +13,9 @@ module.exports = {
 		localhost: {
 			url: "http://localhost:8545",
 			chainId: 31337,
+		},
+		hardhat: {
+			chainId: 1337,
 		},
 	},
 };
