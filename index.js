@@ -3,12 +3,12 @@ require("dotenv").config();
 import express, { json } from "express";
 // import jwt from "jsonwebtoken";
 
-const API_URL = process.env.API_URL;
+const INFURA_URL = process.env.INFURA_URL;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const provider = new JsonRpcProvider(API_URL);
+const provider = new JsonRpcProvider(INFURA_URL);
 const signer = new Wallet(PRIVATE_KEY, provider);
 import { abi } from "./artifacts/contracts/Evote.sol/Evote.json";
 const contractInstance = new Contract(CONTRACT_ADDRESS, abi, signer);
