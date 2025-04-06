@@ -50,7 +50,7 @@ app.post("/api/register", async (req, res) => {
 
 app.get("/api/get-voter-nims", async (req, res) => {
 	try {
-		const voterNims = await contractInstance.getVoterNIMS();
+		const voterNims = await sendTransaction("getVoterNims");
 		res.json({ voterNims });
 	} catch (error) {
 		console.error(error);
