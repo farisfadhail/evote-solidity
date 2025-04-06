@@ -1,17 +1,8 @@
-import { JsonRpcProvider, Wallet, Contract } from "ethers";
-require("dotenv").config();
 import express, { json } from "express";
-import { abi } from "./artifacts/contracts/Evote.sol/Evote.json";
-// import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+import contractInstance from "./lib/contract.js";
 
-const INFURA_SEPOLIA_URL = process.env.INFURA_SEPOLIA_URL;
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
-const JWT_SECRET = process.env.JWT_SECRET;
-
-const provider = new JsonRpcProvider(INFURA_SEPOLIA_URL);
-const signer = new Wallet(PRIVATE_KEY, provider);
-const contractInstance = new Contract(CONTRACT_ADDRESS, abi, signer);
+dotenv.config();
 
 const app = express();
 app.use(json());
@@ -19,7 +10,8 @@ app.use(json());
 // Function to sign and send a transaction
 const sendTransaction = async (method, ...params) => {
 	const tx = await contractInstance[method](...params);
-	return tx.wait();
+	const receipt = await tx.wait();
+	return receipt;
 };
 
 app.get("/", (req, res) => {
@@ -35,10 +27,15 @@ app.get("/api", (req, res) => {
 
 app.post("/api/register", async (req, res) => {
 	try {
-		const role = req.body.role;
-		if (role == "voter") {
-			const tx = await sendTransaction("register", req.body.NIM, req.body.password, role);
-			res.json({ success: true, message: "Registered successfully!", transactionHash: tx.hash });
+		const { NIM, password, role } = req.body;
+
+		if (role === "voter") {
+			const txReceipt = await sendTransaction("register", NIM, password, role);
+			res.json({
+				success: true,
+				message: "Registered successfully!",
+				transactionHash: txReceipt?.hash || "N/A",
+			});
 		} else {
 			res.json({ success: false, message: "Only voters can register" });
 		}
@@ -50,21 +47,21 @@ app.post("/api/register", async (req, res) => {
 
 app.get("/api/get-voter-nims", async (req, res) => {
 	try {
-		const voterNims = await sendTransaction("getVoterNims");
+		const voterNims = await contractInstance.getVoterNIMS();
 		res.json({ voterNims });
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ error: "Failed to get voter NIMs" });
+		res.status(500).json({ error: "Failed to get voter NIMs (In Root Folder)" });
 	}
 });
 
 app.get("/api/test-admin", async (req, res) => {
 	try {
-		const testAdmin = await sendTransaction.testAdmin();
-		res.json({ message: "Test Admin" + testAdmin });
+		const testAdmin = await contractInstance.testAdmin();
+		res.json({ message: "Test Admin: " + testAdmin });
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ error: "Failed to get voter NIMs" });
+		res.status(500).json({ error: "Failed to test admin function" });
 	}
 });
 
