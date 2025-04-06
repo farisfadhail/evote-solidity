@@ -1,14 +1,13 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
-const INFURA_API_KEY = process.env.INFURA_API_KEY;
-
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
 	solidity: "0.8.27",
 	networks: {
 		sepolia: {
-			url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
+			url: process.env.INFURA_SEPOLIA_URL,
+			accounts: [process.env.PRIVATE_KEY],
 		},
 		localhost: {
 			url: "http://localhost:8545",
