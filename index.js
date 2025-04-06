@@ -1,6 +1,7 @@
 import { JsonRpcProvider, Wallet, Contract } from "ethers";
 require("dotenv").config();
 import express, { json } from "express";
+import { abi } from "./artifacts/contracts/Evote.sol/Evote.json";
 // import jwt from "jsonwebtoken";
 
 const INFURA_SEPOLIA_URL = process.env.INFURA_SEPOLIA_URL;
@@ -10,7 +11,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 const provider = new JsonRpcProvider(INFURA_SEPOLIA_URL);
 const signer = new Wallet(PRIVATE_KEY, provider);
-import { abi } from "./artifacts/contracts/Evote.sol/Evote.json";
 const contractInstance = new Contract(CONTRACT_ADDRESS, abi, signer);
 
 const app = express();
@@ -35,10 +35,9 @@ app.get("/api", (req, res) => {
 
 app.post("/api/register", async (req, res) => {
 	try {
-		role = req.body.role;
+		const role = req.body.role;
 		if (role == "voter") {
 			const tx = await sendTransaction("register", req.body.NIM, req.body.password, role);
-			await tx.wait();
 			res.json({ success: true, message: "Registered successfully!", transactionHash: tx.hash });
 		} else {
 			res.json({ success: false, message: "Only voters can register" });
@@ -51,7 +50,7 @@ app.post("/api/register", async (req, res) => {
 
 app.get("/api/get-voter-nims", async (req, res) => {
 	try {
-		const voterNims = await sendTransaction.getVoterNIMS();
+		const voterNims = await contractInstance.getVoterNIMS();
 		res.json({ voterNims });
 	} catch (error) {
 		console.error(error);
