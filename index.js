@@ -8,8 +8,12 @@ const app = express();
 app.use(json());
 
 // Function to sign and send a transaction
-const sendTransaction = async (method, ...params) => {
-	const tx = await contractInstance[method](...params);
+const sendTransaction = async (methodName, ...params) => {
+	if (typeof contractInstance[methodName] !== "function") {
+		throw new Error(`Method ${methodName} is not a valid function in contract`);
+	}
+
+	const tx = await contractInstance[methodName](...params);
 	const receipt = await tx.wait();
 	return receipt;
 };
@@ -26,22 +30,40 @@ app.get("/api", (req, res) => {
 });
 
 app.post("/api/register", async (req, res) => {
+	console.log("Tersedia method:", Object.keys(contractInstance));
+	console.log("Tipe registerUser:", typeof contractInstance.registerUser);
+	console.log("Function signature:", contractInstance.interface.getSighash("registerUser"));
 	try {
-		const { NIM, password, role } = req.body;
+		const { nim, password, role } = req.body;
 
-		if (role === "voter") {
-			const txReceipt = await sendTransaction("register", NIM, password, role);
-			res.json({
-				success: true,
-				message: "Registered successfully!",
-				transactionHash: txReceipt?.hash || "N/A",
-			});
+		let roleEnum = -1;
+		if (role.toLowerCase() === "admin") {
+			roleEnum = 1;
+		} else if (role.toLowerCase() === "voter") {
+			roleEnum = 2;
 		} else {
-			res.json({ success: false, message: "Only voters can register" });
+			return res.status(400).json({ success: false, message: "Invalid role" });
 		}
+
+		// Kirim transaksi ke blockchain
+		const tx = await contractInstance.registerUser(nim, password, roleEnum);
+		const receipt = await tx.wait();
+
+		res.json({
+			success: true,
+			message: "Registered successfully!",
+			transactionHash: receipt.hash,
+			blockNumber: receipt.blockNumber,
+		});
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ error: "Failed to register" });
+		res.status(500).json({
+			error: "Failed to register",
+			details: error.reason || error.message,
+			object: Object.keys(contractInstance),
+			type: typeof contractInstance.registerUser,
+			signature: contractInstance.interface.getSighash("registerUser"),
+		});
 	}
 });
 
