@@ -1,6 +1,7 @@
 import express, { json } from "express";
 import dotenv from "dotenv";
-import contractInstance from "./lib/contract.js";
+import { contractInstance, provider } from "./lib/contract.js";
+import { keccak256, toUtf8Bytes } from "ethers";
 
 dotenv.config();
 
@@ -29,10 +30,31 @@ app.get("/api", (req, res) => {
 	res.json({ message: "Welcome to Evote API" });
 });
 
+app.get("/api/tx-status/:txHash", async (req, res) => {
+	try {
+		const txHash = req.params.txHash;
+		const receipt = await provider.getTransactionReceipt(txHash);
+
+		if (!receipt) {
+			return res.json({ status: "pending" });
+		}
+
+		res.json({
+			status: receipt.status === 1 ? "success" : "failed",
+			blockNumber: receipt.blockNumber,
+			confirmations: receipt.confirmations,
+			gasUsed: receipt.gasUsed.toString(),
+		});
+	} catch (err) {
+		console.error(err);
+		res.status(500).json({ error: "Error getting transaction receipt" });
+	}
+});
+
+// ! Deploy ulang smart contract: npx hardhat run scripts/deploy.js --network sepolia
+// ! Deploy ulang vercel: vercel --prod
+
 app.post("/api/register", async (req, res) => {
-	console.log("Tersedia method:", Object.keys(contractInstance));
-	console.log("Tipe registerUser:", typeof contractInstance.registerUser);
-	console.log("Function signature:", contractInstance.interface.getSighash("registerUser"));
 	try {
 		const { nim, password, role } = req.body;
 
@@ -45,25 +67,19 @@ app.post("/api/register", async (req, res) => {
 			return res.status(400).json({ success: false, message: "Invalid role" });
 		}
 
-		// Kirim transaksi ke blockchain
-		const tx = await contractInstance.registerUser(nim, password, roleEnum);
-		const receipt = await tx.wait();
+		const hashedPassword = keccak256(toUtf8Bytes(password + nim));
+
+		const tx = await contractInstance.registerUser(nim, hashedPassword, roleEnum);
 
 		res.json({
 			success: true,
-			message: "Registered successfully!",
-			transactionHash: receipt.hash,
-			blockNumber: receipt.blockNumber,
+			message: "Transaction submitted. Check status with /api/tx-status/" + tx.hash,
+			transactionHash: tx.hash,
+			info: "Transaction will be confirmed shortly on the blockchain.",
 		});
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({
-			error: "Failed to register",
-			details: error.reason || error.message,
-			object: Object.keys(contractInstance),
-			type: typeof contractInstance.registerUser,
-			signature: contractInstance.interface.getSighash("registerUser"),
-		});
+		res.status(500).json({ error: "Failed to register", details: error.reason || error.message });
 	}
 });
 
