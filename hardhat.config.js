@@ -9,6 +9,10 @@ module.exports = {
 			url: process.env.INFURA_SEPOLIA_URL,
 			accounts: [process.env.PRIVATE_KEY],
 		},
+		amoy: {
+		      	url: process.env.INFURA_AMOY_URL,
+		      	accounts: [process.env.PRIVATE_KEY],
+		},
 		localhost: {
 			url: "http://localhost:8545",
 			chainId: 31337,
